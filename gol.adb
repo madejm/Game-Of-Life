@@ -1,6 +1,6 @@
 with Ada.Text_IO;    use Ada.Text_IO;
 
-with Arrays2D; use Arrays2D;
+with TypeArray2D; use TypeArray2D;
 with BusinessLogic; use businesslogic;
 
 procedure GOL is

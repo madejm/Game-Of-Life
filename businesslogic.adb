@@ -1,4 +1,4 @@
-with Arrays2D; use Arrays2D;
+with TypeArray2D; use TypeArray2D;
 with Ada.Text_IO; use Ada.Text_IO;
 
 package body BusinessLogic is

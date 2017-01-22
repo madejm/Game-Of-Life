@@ -1,4 +1,4 @@
-package Arrays2D is
+package TypeArray2D is
 
    type Array2D is array(Integer range <>, Integer range <>) of Float;
 
@@ -6,4 +6,4 @@ package Arrays2D is
    procedure Print_array (arr : Array2D; I : Integer; J : Integer);
    function Array_from_file(Filename: String; sizeI : Integer; sizeJ : Integer) return Array2D;
    
-end Arrays2D;
+end TypeArray2D;

@@ -1,7 +1,7 @@
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Float_Text_IO;
 
-package body Arrays2D is
+package body TypeArray2D is
 
    procedure Initialize_array (Array2 : in out Array2D; I : Integer; J : Integer) is
    begin
@@ -63,4 +63,4 @@ package body Arrays2D is
 
     end Array_from_file;
 
-end Arrays2D;
+end TypeArray2D;

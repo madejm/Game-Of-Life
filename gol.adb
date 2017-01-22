@@ -4,131 +4,117 @@ with TypeArray2D; use TypeArray2D;
 with BusinessLogic; use businesslogic;
 
 procedure GOL is
-	MAX_SIZE : Integer := 10;
-	ITERATIONS : Integer := 10;
-	FILE_IN_NAME : String := "matrix.txt";
-	NUMBER_OF_WORKERS : Integer := 2;
+	SIZE : Integer := 10;
+	STEPS : Integer := 3;
+	FILENAME : String := "matrix.txt";
+	TASKS : Integer := 2;
 
-	task Supervisor is
-	    entry Start_game;
-	    entry on_data_returned (
-			data                  : Array2D;
-			start_range           : Integer;
-			end_range             : Integer;
-			current_worker_number : Integer);
-	end Supervisor;
+	task Game is
+	    entry Start;
+	    entry calculated(data : Array2D; from : Integer; to : Integer; currentTaskNumber : Integer);
+	end Game;
 
-	task type Worker_task is
-	    entry Get_worker_number_from_supervisor(worker_num : Integer);
-	    entry Fill_local_board_part(whole_board : Array2D);
-	    entry process_data;
-	end Worker_task;
+	task type GameTask is
+	    entry AssignNumber(number : Integer);
+	    entry SetMatrixPart(whole_board : Array2D);
+	    entry SetMatrix(m : Array2D);
+	    entry CalculatePart;
+	end GameTask;
 
-    -- Nadzorca
-    task body Supervisor is
-        matrix : Array2D(1..MAX_SIZE, 1..MAX_SIZE);
-        workers : array(1..NUMBER_OF_WORKERS) of Worker_task;
+
+    task body Game is
+        matrix : Array2D(1..SIZE, 1..SIZE);
+        taskArray : array(1..TASKS) of GameTask;
     begin
-    accept Start_game;
+		accept Start;
 
-    Put_Line("Nadzorca: Odebrano sygnal startu");
+		matrix := ArrayFromFile(FILENAME, SIZE, SIZE);
 
-    matrix := Array_from_file(FILE_IN_NAME, MAX_SIZE, MAX_SIZE);
-    -- tmp_board := Array_from_file(FILE_IN_NAME, size_y, size_x);
+		PrintArray(matrix,SIZE,SIZE);
 
-    Put_Line("Nadzorca: Wczytano tablice z pliku i wypelniono brzegi zerami:");
-    -- Print_array(matrix,size_y,size_x);
-    Print_array(matrix,MAX_SIZE,MAX_SIZE);
+		for I in 1..TASKS loop
+		  	taskArray(I).AssignNumber(I);
+		    taskArray(I).SetMatrixPart(matrix);
+		end loop;
 
-    -- nadanie workerom numerow i wypelnienie ich czesci planszy lokalnych
-    for I in 1..NUMBER_OF_WORKERS loop
-      workers(I).Get_worker_number_from_supervisor(I);
-      workers(I).Fill_local_board_part(matrix);
-    end loop;
+		-- glowna petla gry
+		for J in 1..STEPS loop
+		   	Put_Line("");
+		   	Put_Line(Integer'Image(J));
 
-    -- glowna petla gry
-    for J in 1..ITERATIONS loop
-       Put_Line("Nadzorca: START NOWEJ ITERACJI");
+			-- niech kazdy worker przetwarza swoja czesc
+		  	for I in 1 .. TASKS loop
+		    	taskArray(I).SetMatrix(matrix);
+		    	taskArray(I).CalculatePart;
+		   	end loop;
 
-       -- niech kazdy worker przetwarza swoja czesc
-       for I in 1 .. NUMBER_OF_WORKERS loop
-         workers(I).process_data;
-       end loop;
+		   	for I in 1 .. TASKS loop
 
-       for I in 1 .. NUMBER_OF_WORKERS loop
+		    	-- skladanie przetworzonej tablicy
+		     	accept calculated(data : Array2D; from : Integer; to : Integer; currentTaskNumber : Integer) do
 
-         -- skladanie przetworzonej tablicy
-         accept on_data_returned (
-               data                  : Array2D;
-               start_range           : Integer;
-               end_range             : Integer;
-               current_worker_number : Integer) do
+		           	for I in 1..SIZE loop
+		            	for J in from..to loop
+		               		matrix(I,J) := data( I, J-(SIZE/TASKS-1)*(currentTaskNumber-1) );
+		             	end loop;
+		           	end loop;
 
-           for I in 1..MAX_SIZE loop
-             for J in start_range..end_range loop
-               matrix(I,J) := data( I, J-(MAX_SIZE/NUMBER_OF_WORKERS-1)*(current_worker_number-1) );
-             end loop;
-           end loop;
+		    	end calculated;
+		   	end loop;
 
-         end on_data_returned;
-       end loop;
-
-       Put_Line("Nadzorca: Odebrano od workerow i scalono przetworzona tablice:");
-       Print_array(matrix, MAX_SIZE, MAX_SIZE);
-    end loop;
-  end Supervisor;
+		    PrintArray(matrix, SIZE, SIZE);
+		end loop;
+  	end Game;
 
 
-  -- Worker --------------------------------------------------------------------
-  task body Worker_task is
-    worker_id : Integer;
-    local_board_copy : Array2D(1..MAX_SIZE, 1..((MAX_SIZE)/NUMBER_OF_WORKERS)+1);
-  begin
-    -- nadaja workerowi unikalny numer
-    accept Get_worker_number_from_supervisor(worker_num : Integer) do
-      worker_id := worker_num;
-    end Get_worker_number_from_supervisor;
+	task body GameTask is
+		taskNumber : Integer;
+        matrix     : Array2D(1..SIZE, 1..SIZE);
+		matrixPart : Array2D(1..SIZE, 1..((SIZE)/TASKS)+1);
+	begin
+		accept AssignNumber(number : Integer) do
+		 	taskNumber := number;
+		end AssignNumber;
 
-    -- wypelniaja jego lokalna kopie tablicy
-    accept Fill_local_board_part(whole_board : Array2D) do
-    -- wszystkie zakresy sa uzmiennione - wole wyliczac je na podstawie innych
-    -- parametrow programu niz wpisywac 'na sztywno'
-    declare
-      var_start_range : Integer := (MAX_SIZE / NUMBER_OF_WORKERS * (worker_id-1)) + worker_id mod 2;
-      var_end_range : Integer := (MAX_SIZE/NUMBER_OF_WORKERS * worker_id) + worker_id mod 2;
-      var_decrement : Integer := (MAX_SIZE/NUMBER_OF_WORKERS-1)*(worker_id-1);
-    begin
-      for I in 1..MAX_SIZE loop
-        for J in var_start_range..var_end_range loop
-          local_board_copy( I, J-var_decrement ) := whole_board(I,J);
-        end loop;
-      end loop;
-    end;end Fill_local_board_part;
+		accept SetMatrixPart(whole_board : Array2D) do
+			declare
+			  	from : Integer := (SIZE / TASKS * (taskNumber-1)) + taskNumber mod 2;
+			  	to : Integer := (SIZE/TASKS * taskNumber) + taskNumber mod 2;
+			  	var_decrement : Integer := (SIZE/TASKS - 1) * (taskNumber - 1);
+			begin
+				matrix := whole_board;
+			  	for I in 1..SIZE loop
+			    	for J in from..to loop
+			      		matrixPart(I, J-var_decrement) := whole_board(I,J);
+			    	end loop;
+			  	end loop;
+			end;
+		end SetMatrixPart;
 
-    Put_Line("   Worker " & Integer'Image(worker_id) & ": Wypelniono lokalna czesc planszy");
+		for I in 1..STEPS loop
 
-    for I in 1..ITERATIONS loop
+			accept SetMatrix(m : Array2D) do
+		    	matrix := m;
+		    end SetMatrix;
 
-       -- nastepuje przetwarzanie danych
-       accept process_data;
-       -- wszystkie zakresy sa uzmiennione - wole wyliczac je na podstawie innych
-       -- parametrow programu niz wpisywac 'na sztywno'
-       declare
-         var_start_range : Integer := (MAX_SIZE / NUMBER_OF_WORKERS * (worker_id-1)) + worker_id mod 2 + 2*(worker_id-1);
-         var_end_range : Integer := (MAX_SIZE/NUMBER_OF_WORKERS * worker_id) + worker_id mod 2;
-       begin
-         Apply_gol_logic_to_board(local_board_copy, MAX_SIZE, (MAX_SIZE)/NUMBER_OF_WORKERS+1);
+		   	accept CalculatePart;
+			   	-- wszystkie zakresy sa uzmiennione - wole wyliczac je na podstawie innych
+			   	-- parametrow programu niz wpisywac 'na sztywno'
+			   	declare
+			     	from : Integer := (SIZE/TASKS * (taskNumber - 1)) + taskNumber mod 2 + 2 * (taskNumber - 1);
+			     	to : Integer := (SIZE/TASKS * taskNumber) + taskNumber mod 2;
+			   	begin
+			     	CalculateMatrix(matrixPart, matrix, SIZE, SIZE/TASKS + 1);
 
-         Put_Line("   Worker " & Integer'Image(worker_id) & ": Przetworzono lokalna czesc planszy");
-         Put_Line("   Worker " & Integer'Image(worker_id) & ": Trwa wysylanie przetworzonej czesci do nadzorcy..");
+			     	Put_Line("   Worker " & Integer'Image(taskNumber) & ": Przetworzono lokalna czesc planszy");
 
-         -- oraz odsylanie przetworzonej porcji tablicy do nadzorcy
-         Supervisor.on_data_returned(local_board_copy, var_start_range, var_end_range, worker_id);
-       end;
-    end loop;
+			     	-- oraz odsylanie przetworzonej porcji tablicy do nadzorcy
+			     	Game.calculated(matrixPart, from, to, taskNumber);
+			   	end;
+		end loop;
 
-  end Worker_task;
+	end GameTask;
+
 begin
-
-	Supervisor.Start_game;
+	Game.Start;
 end GOL;

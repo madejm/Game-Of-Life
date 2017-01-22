@@ -12,7 +12,7 @@ package body TypeArray2D is
       end loop;
    end Initialize_array;
 
-   procedure Print_array (arr : Array2D; I : Integer; J : Integer) is
+   procedure PrintArray (arr : Array2D; I : Integer; J : Integer) is
    begin
       for X in 1 .. I loop
          for Y in 1 .. J loop
@@ -20,9 +20,9 @@ package body TypeArray2D is
          end loop;
          Put_Line("");
       end loop;
-   end Print_array;
+   end PrintArray;
 
-   function Array_from_file(Filename: String; sizeI : Integer; sizeJ : Integer) return Array2D is
+   function ArrayFromFile(Filename: String; sizeI : Integer; sizeJ : Integer) return Array2D is
         File         : File_Type;
         Char         : Character;
         Result_arr   : Array2D(1..sizeI,1..sizeJ);
@@ -61,6 +61,6 @@ package body TypeArray2D is
         Close (File);
         return Result_arr;
 
-    end Array_from_file;
+    end ArrayFromFile;
 
 end TypeArray2D;

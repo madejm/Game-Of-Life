@@ -3,26 +3,31 @@ with Ada.Float_Text_IO;
 
 package body TypeArray2D is
 
-   procedure Initialize_array (Array2 : in out Array2D; I : Integer; J : Integer) is
-   begin
-      for X in 1 .. I loop
-         for Y in 1 .. J loop
-            Array2 (X, Y) := Float (X + Y);
-         end loop;
-      end loop;
-   end Initialize_array;
+    procedure Initialize_array(Array2 : in out Array2D; I : Integer; J : Integer) is
+    begin
+        for X in 1 .. I loop
+            for Y in 1 .. J loop
+                Array2 (X, Y) := Float (X + Y);
+            end loop;
+        end loop;
+    end Initialize_array;
 
-   procedure PrintArray (arr : Array2D; I : Integer; J : Integer) is
-   begin
-      for X in 1 .. I loop
-         for Y in 1 .. J loop
-            Put(Integer'Image(Integer(arr(X, Y))));
-         end loop;
-         Put_Line("");
-      end loop;
+    procedure PrintArray(arr : Array2D; I : Integer; J : Integer) is
+    begin
+        for X in 1 .. I loop
+            for Y in 1 .. J loop
+                if arr(X, Y) = 1.0 then
+                    Put("X ");
+                else
+                    Put("  ");
+                end if;
+            end loop;
+            
+            Put_Line("");
+        end loop;
    end PrintArray;
 
-   function ArrayFromFile(Filename: String; sizeI : Integer; sizeJ : Integer) return Array2D is
+    function ArrayFromFile(Filename: String; sizeI : Integer; sizeJ : Integer) return Array2D is
         File         : File_Type;
         Char         : Character;
         Result_arr   : Array2D(1..sizeI,1..sizeJ);
